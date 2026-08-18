@@ -1,54 +1,40 @@
-# F-ALS — Unity Package Manager installation
+# Install F-ALS 1.0.2
 
-F-ALS is distributed as a Unity Package Manager (UPM) package from this repository root.
+## Unity Package Manager
 
-## Unity 6
-
-Supported baseline: Unity 6000.x.
-
-The package declares `com.unity.animation.rigging` 1.4.0 as a dependency.
-
-## Install from Git URL
-
-In Unity open:
+Open:
 
 `Window > Package Manager > + > Install package from git URL...`
 
-For a repository that your Git client can authenticate to, enter:
+Enter:
 
 `https://github.com/JayO6661/F-ALS-Unity-6.5.git`
 
-For a reproducible revision append a full commit SHA:
+For production, pin a full commit SHA:
 
 `https://github.com/JayO6661/F-ALS-Unity-6.5.git#<FULL_COMMIT_SHA>`
 
-For private-repository SSH authentication you can alternatively use:
+The package declares Animation Rigging 1.4.0 and Unity Package Manager resolves it automatically.
 
-`ssh://git@github.com/JayO6661/F-ALS-Unity-6.5.git`
+## First use
 
-Git authentication must already work outside Unity. Unity Package Manager cannot display an interactive username/password prompt for a private Git repository.
+1. Select the player root GameObject.
+2. Run `Tools > F-ALS > Setup Selected Player`.
+3. Click `Apply Core Setup`.
+4. Run `Tools > F-ALS > Validate Selected Player`.
 
-## Project manifest
+The setup tool does not add game input, stamina, ball or networking logic.
 
-The equivalent `Packages/manifest.json` dependency is:
+## Updating a Git-installed package
+
+If Unity is pinned to an old commit, remove the package and install the new pinned URL, or update the Git revision in `Packages/manifest.json` and reopen the project.
+
+## Production manifest example
 
 ```json
 {
   "dependencies": {
-    "com.fgp.fals": "https://github.com/JayO6661/F-ALS-Unity-6.5.git"
+    "com.fgp.fals": "https://github.com/JayO6661/F-ALS-Unity-6.5.git#<FULL_COMMIT_SHA>"
   }
 }
 ```
-
-Pin a full commit SHA for production projects.
-
-## Package layout
-
-- `Runtime/` — runtime assembly and F-ALS components.
-- `Editor/` — editor tooling and player setup utilities.
-- `Docs/` — architecture and setup documentation.
-- `package.json` — UPM package manifest.
-
-## Production integration rule
-
-Games should drive `FAlsController` through their own input/AI/network orchestration. `FAlsInputDriver` and `FAlsBootstrap` are standalone demo utilities and should not be used as a second production input authority.
