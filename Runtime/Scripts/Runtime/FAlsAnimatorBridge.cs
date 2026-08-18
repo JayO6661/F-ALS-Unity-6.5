@@ -1,6 +1,4 @@
-using FGP.FALS.Action;
-using FGP.FALS.Core;
-using FGP.FALS.Procedural;
+using System.Collections.Generic;
 using FGP.FALS.Recovery;
 using UnityEngine;
 
@@ -43,59 +41,96 @@ namespace FGP.FALS.Runtime
         [SerializeField] private string stabilityParam = "FALS_Stability";
         [SerializeField] private string requestGetUpParam = "FALS_RequestGetUp";
 
+        private readonly HashSet<int> _availableParameters = new HashSet<int>();
+
+        private void Awake()
+        {
+            RebuildParameterCache();
+        }
+
         private void Reset()
         {
-            animator = GetComponent<Animator>();
+            animator = GetComponentInChildren<Animator>(true);
+        }
+
+        private void OnValidate()
+        {
+            if (animator == null) animator = GetComponentInChildren<Animator>(true);
+        }
+
+        public void RebuildParameterCache()
+        {
+            _availableParameters.Clear();
+            if (animator == null) return;
+
+            foreach (var parameter in animator.parameters)
+            {
+                _availableParameters.Add(parameter.nameHash);
+            }
         }
 
         public void Apply(FAlsActorSignals signals)
         {
-            if (animator == null)
-            {
-                return;
-            }
+            if (animator == null) return;
+            if (_availableParameters.Count == 0 && animator.runtimeAnimatorController != null) RebuildParameterCache();
 
             var locomotion = signals.Locomotion;
             var procedural = signals.Procedural;
             var football = signals.FootballAction;
             var recovery = signals.Recovery;
 
-            animator.SetBool(modeGroundedParam, locomotion.IsGrounded);
-            animator.SetFloat(desiredSpeedParam, locomotion.DesiredSpeed);
-            animator.SetFloat(strideParam, locomotion.StrideBlend);
-            animator.SetFloat(moveAlphaParam, locomotion.MoveAlpha);
-            animator.SetFloat(leanParam, locomotion.Lean);
+            SetBool(modeGroundedParam, locomotion.IsGrounded);
+            SetFloat(desiredSpeedParam, locomotion.DesiredSpeed);
+            SetFloat(strideParam, locomotion.StrideBlend);
+            SetFloat(moveAlphaParam, locomotion.MoveAlpha);
+            SetFloat(leanParam, locomotion.Lean);
 
-            animator.SetInteger(gaitParam, ToInt(locomotion.Gait));
-            animator.SetInteger(rotationModeParam, ToInt(locomotion.RotationMode));
-            animator.SetInteger(stanceParam, ToInt(locomotion.Stance));
-            animator.SetInteger(locomotionActionParam, ToInt(locomotion.Action));
+            SetInteger(gaitParam, (int)locomotion.Gait);
+            SetInteger(rotationModeParam, (int)locomotion.RotationMode);
+            SetInteger(stanceParam, (int)locomotion.Stance);
+            SetInteger(locomotionActionParam, (int)locomotion.Action);
 
-            animator.SetInteger(footballActionParam, ToInt(football.ActionType));
-            animator.SetBool(actionReadyParam, football.IsActionReady);
-            
-            // Use recovery PhysicalControl if available, otherwise fallback to locomotion.
-            float physicalControl = recovery.State != FAlsRecoveryState.None ? recovery.PhysicalControl : locomotion.PhysicalControl;
-            animator.SetFloat(physicalControlParam, physicalControl);
+            SetInteger(footballActionParam, (int)football.ActionType);
+            SetBool(actionReadyParam, football.IsActionReady);
 
-            animator.SetFloat(footLockParam, procedural.FootLock);
-            animator.SetFloat(pelvisUpParam, procedural.PelvisOffset.y);
-            animator.SetFloat(pelvisForwardParam, procedural.PelvisOffset.z);
-            animator.SetFloat(leanCorrectionParam, procedural.LeanCorrection);
-            animator.SetFloat(groundAdaptationParam, procedural.GroundAdaptation);
-            animator.SetFloat(balanceParam, procedural.Balance);
-            animator.SetFloat(leftFootYParam, procedural.LeftFootOffset.y);
-            animator.SetFloat(rightFootYParam, procedural.RightFootOffset.y);
-            animator.SetInteger(lockedFootParam, ToInt(procedural.LockedFoot));
+            float physicalControl = recovery.State != FAlsRecoveryState.None
+                ? recovery.PhysicalControl
+                : locomotion.PhysicalControl;
+            SetFloat(physicalControlParam, physicalControl);
 
-            animator.SetInteger(recoveryStateParam, ToInt(recovery.State));
-            animator.SetFloat(stabilityParam, recovery.Stability);
-            animator.SetBool(requestGetUpParam, recovery.RequestGetUp);
+            SetFloat(footLockParam, procedural.FootLock);
+            SetFloat(pelvisUpParam, procedural.PelvisOffset.y);
+            SetFloat(pelvisForwardParam, procedural.PelvisOffset.z);
+            SetFloat(leanCorrectionParam, procedural.LeanCorrection);
+            SetFloat(groundAdaptationParam, procedural.GroundAdaptation);
+            SetFloat(balanceParam, procedural.Balance);
+            SetFloat(leftFootYParam, procedural.LeftFootOffset.y);
+            SetFloat(rightFootYParam, procedural.RightFootOffset.y);
+            SetInteger(lockedFootParam, (int)procedural.LockedFoot);
+
+            SetInteger(recoveryStateParam, (int)recovery.State);
+            SetFloat(stabilityParam, recovery.Stability);
+            SetBool(requestGetUpParam, recovery.RequestGetUp);
         }
 
-        private static int ToInt(System.Enum value)
+        private bool Has(string parameterName)
         {
-            return System.Convert.ToInt32(value);
+            return !string.IsNullOrEmpty(parameterName) && _availableParameters.Contains(Animator.StringToHash(parameterName));
+        }
+
+        private void SetFloat(string parameterName, float value)
+        {
+            if (Has(parameterName)) animator.SetFloat(parameterName, value);
+        }
+
+        private void SetInteger(string parameterName, int value)
+        {
+            if (Has(parameterName)) animator.SetInteger(parameterName, value);
+        }
+
+        private void SetBool(string parameterName, bool value)
+        {
+            if (Has(parameterName)) animator.SetBool(parameterName, value);
         }
     }
 }
