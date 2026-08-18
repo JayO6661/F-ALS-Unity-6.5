@@ -1,0 +1,61 @@
+```
+# Unity specific ignores
+Library/
+Temp/
+Obj/
+Build/
+Logs/
+*.unityproj
+*.sln
+*.csproj
+*.user
+*.userprefs
+*.pidb
+*.booproj
+*.svd
+*.meta
+*.cache
+*.asmdef
+*.rsp
+*.asmref
+
+# Build artifacts
+*.dll
+*.exe
+*.pdb
+*.so
+*.dylib
+*.manifest
+*.prefab
+*.asset
+
+# Config files
+*.config
+*.xml
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Icon?
+desktop.ini
+
+# Environment variables
+.env
+.env.local
+*.env.*
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+
+# Dependencies
+node_modules/
+Packages/
+```

@@ -8,6 +8,13 @@ namespace FGP.FALS.Procedural
         Right = 1
     }
 
+    public enum FAlsLockedFoot
+    {
+        None = 0,
+        Left = 1,
+        Right = 2
+    }
+
     public struct FAlsProceduralSignals
     {
         public float FootLock;
@@ -17,7 +24,7 @@ namespace FGP.FALS.Procedural
         public float Balance;
         public Vector3 LeftFootOffset;
         public Vector3 RightFootOffset;
-        public FAlsFootId LockedFoot;
+        public FAlsLockedFoot LockedFoot;
     }
 
     public static class FAlsProceduralSolver
@@ -51,7 +58,7 @@ namespace FGP.FALS.Procedural
             var leftFootOffset = new Vector3(0f, -footLock * 0.01f + (locomotion.IsGrounded ? 0f : -0.03f), -leanToOffset(locomotion.Lean) * 0.01f) + new Vector3(0f, strideL, 0f) * groundBlend;
             var rightFootOffset = new Vector3(0f, -footLock * 0.01f + (locomotion.IsGrounded ? 0f : -0.03f), leanToOffset(locomotion.Lean) * 0.01f) + new Vector3(0f, strideR, 0f) * groundBlend;
 
-            var lockedFoot = leftPhase > rightPhase ? FAlsFootId.Left : FAlsFootId.Right;
+            var lockedFoot = leftPhase > rightPhase ? FAlsLockedFoot.Left : FAlsLockedFoot.Right;
 
             return new FAlsProceduralSignals
             {
