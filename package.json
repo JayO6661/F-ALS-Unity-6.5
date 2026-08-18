@@ -1,6 +1,6 @@
 {
   "name": "com.fgp.fals",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "displayName": "F-ALS — Football Adaptive Locomotion System",
   "description": "Football-specific locomotion, recovery, procedural body signals and football body-action readiness for Unity 6.",
   "unity": "6000.0",
