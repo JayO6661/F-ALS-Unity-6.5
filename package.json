@@ -1,12 +1,19 @@
 {
   "name": "com.fgp.fals",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "displayName": "F-ALS — Football Adaptive Locomotion System",
-  "description": "Football-specific locomotion, recovery, procedural body signals and football body-action readiness for Unity 6.",
+  "description": "Production-ready football locomotion foundation for Unity 6: motor, movement capacity, recovery state, procedural signals, body-action readiness and optional Animation Rigging foot IK.",
   "unity": "6000.0",
   "author": {
     "name": "FGP"
   },
+  "keywords": [
+    "football",
+    "locomotion",
+    "procedural-animation",
+    "ik",
+    "unity6"
+  ],
   "dependencies": {
     "com.unity.animation.rigging": "1.4.0"
   }
