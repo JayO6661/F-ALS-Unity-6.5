@@ -1,6 +1,7 @@
 using FGP.FALS.Action;
 using FGP.FALS.Core;
 using FGP.FALS.Procedural;
+using FGP.FALS.Recovery;
 using UnityEngine;
 
 namespace FGP.FALS.Runtime
@@ -37,6 +38,11 @@ namespace FGP.FALS.Runtime
         [SerializeField] private string rightFootYParam = "FALS_RightFootY";
         [SerializeField] private string lockedFootParam = "FALS_LockedFoot";
 
+        [Header("Recovery Params")]
+        [SerializeField] private string recoveryStateParam = "FALS_RecoveryState";
+        [SerializeField] private string stabilityParam = "FALS_Stability";
+        [SerializeField] private string requestGetUpParam = "FALS_RequestGetUp";
+
         private void Reset()
         {
             animator = GetComponent<Animator>();
@@ -52,6 +58,7 @@ namespace FGP.FALS.Runtime
             var locomotion = signals.Locomotion;
             var procedural = signals.Procedural;
             var football = signals.FootballAction;
+            var recovery = signals.Recovery;
 
             animator.SetBool(modeGroundedParam, locomotion.IsGrounded);
             animator.SetFloat(desiredSpeedParam, locomotion.DesiredSpeed);
@@ -66,7 +73,10 @@ namespace FGP.FALS.Runtime
 
             animator.SetInteger(footballActionParam, ToInt(football.ActionType));
             animator.SetBool(actionReadyParam, football.IsActionReady);
-            animator.SetFloat(physicalControlParam, locomotion.PhysicalControl);
+            
+            // Use recovery PhysicalControl if available, otherwise fallback to locomotion.
+            float physicalControl = recovery.State != FAlsRecoveryState.None ? recovery.PhysicalControl : locomotion.PhysicalControl;
+            animator.SetFloat(physicalControlParam, physicalControl);
 
             animator.SetFloat(footLockParam, procedural.FootLock);
             animator.SetFloat(pelvisUpParam, procedural.PelvisOffset.y);
@@ -77,6 +87,10 @@ namespace FGP.FALS.Runtime
             animator.SetFloat(leftFootYParam, procedural.LeftFootOffset.y);
             animator.SetFloat(rightFootYParam, procedural.RightFootOffset.y);
             animator.SetInteger(lockedFootParam, ToInt(procedural.LockedFoot));
+
+            animator.SetInteger(recoveryStateParam, ToInt(recovery.State));
+            animator.SetFloat(stabilityParam, recovery.Stability);
+            animator.SetBool(requestGetUpParam, recovery.RequestGetUp);
         }
 
         private static int ToInt(System.Enum value)
