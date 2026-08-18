@@ -65,17 +65,16 @@ Primary integration points:
 - `FAlsMovementCapacity`
 - `FAlsFootballActionInput`
 
-A production game should provide `FAlsMotorInput` and `FAlsFootballActionInput` from its own orchestration layer.
+A production game provides `FAlsMotorInput` and `FAlsFootballActionInput` from its own orchestration layer.
 
-## Important integration rule
+## Integration rule
 
-Do not run a second locomotion authority on the same actor. In a production game, F-ALS should be the only component that executes player locomotion.
+Do not run a second locomotion authority on the same actor. F-ALS should be the only component that executes player locomotion.
 
 ## Optional utilities
 
-`FAlsSignalDebugger` can log locomotion / procedural / football-action signals during development.
-
-Legacy standalone input/bootstrap helpers may exist for package-level experimentation, but production projects should drive `FAlsController` through their own input/AI/network layer.
+- `FAlsFootIK` — Animation Rigging based foot placement / pelvis adaptation.
+- `FAlsSignalDebugger` — runtime signal diagnostics.
 
 ## Package layout
 
@@ -83,4 +82,4 @@ Legacy standalone input/bootstrap helpers may exist for package-level experiment
 - `Editor/` — setup and validation tooling
 - `package.json` — UPM manifest
 
-No Unreal/ALS-Refactored C++ source is shipped inside the Unity package.
+The distributed package contains no Unreal/ALS-Refactored C++ source, test scenes or historical research files.
