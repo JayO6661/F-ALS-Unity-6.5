@@ -4,6 +4,9 @@ using UnityEngine;
 
 namespace FGP.FALS.Runtime
 {
+    /// <summary>
+    /// Standalone/demo input utility. Production games should provide FAlsMotorInput themselves.
+    /// </summary>
     [DisallowMultipleComponent]
     public class FAlsInputDriver : MonoBehaviour
     {
@@ -19,8 +22,7 @@ namespace FGP.FALS.Runtime
         [SerializeField] private float preparedDistance = 1.0f;
         [SerializeField] private float quickDistance = 1.8f;
         [SerializeField] private float reachDistance = 2.6f;
-        [SerializeField] private float leftReach = 0.95f;
-        [SerializeField] private float rightReach = 0.9f;
+        [SerializeField] private float emergencyFootReachDistance = 0.95f;
 
         public FAlsMotorInput ReadMotorInput()
         {
@@ -30,24 +32,28 @@ namespace FGP.FALS.Runtime
                 Sprint = Input.GetKey(sprintKey),
                 Crouch = Input.GetKey(crouchKey),
                 JumpRequested = Input.GetKeyDown(jumpKey),
-                SprintPressed = Input.GetKey(sprintKey),
+                SprintPressed = Input.GetKeyDown(sprintKey),
                 ViewDirection = transform.forward,
                 VelocityInput = Vector3.zero,
-                GroundNormal = Vector3.up
+                GroundNormal = Vector3.up,
+                DesiredRotationMode = FAlsRotationMode.VelocityDirection,
+                AimHeld = false,
+                RotationScale = 1f
             };
         }
 
-        public FAlsFootballActionInput ReadFootballInput(float ballDistance)
+        public FAlsFootballActionInput ReadFootballInput(float ballDistance, float leftFootBallDistance = -1f, float rightFootBallDistance = -1f)
         {
             return new FAlsFootballActionInput
             {
-                ShotPressed = Input.GetKey(shotKey),
+                ShotPressed = Input.GetKeyDown(shotKey),
                 BallDistance = ballDistance,
                 PreparedDistance = preparedDistance,
                 QuickDistance = quickDistance,
                 ReachDistance = reachDistance,
-                LeftFootReachDistance = leftReach,
-                RightFootReachDistance = rightReach
+                LeftFootBallDistance = leftFootBallDistance,
+                RightFootBallDistance = rightFootBallDistance,
+                EmergencyFootReachDistance = emergencyFootReachDistance
             };
         }
     }

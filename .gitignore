@@ -1,8 +1,27 @@
-```
-# Backup files
+# Unity / IDE generated files
+Library/
+Temp/
+Obj/
+Logs/
+Build/
+Builds/
+UserSettings/
+.vs/
+.idea/
+.vscode/
+*.csproj
+*.sln
+*.user
+*.tmp
+*.log
+
+# Local backups
 *.cs.bak
 *.cs.bak.meta
 *.cs.bak.original
 *.cs.bak2
 *.cs.bak2.meta
-```
+
+# OS
+.DS_Store
+Thumbs.db

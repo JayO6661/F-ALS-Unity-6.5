@@ -1,7 +1,9 @@
 {
   "name": "FALS.Runtime",
   "rootNamespace": "FGP.FALS",
-  "references": [],
+  "references": [
+    "Unity.Animation.Rigging"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,
