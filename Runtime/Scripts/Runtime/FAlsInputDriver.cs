@@ -30,10 +30,13 @@ namespace FGP.FALS.Runtime
                 Sprint = Input.GetKey(sprintKey),
                 Crouch = Input.GetKey(crouchKey),
                 JumpRequested = Input.GetKeyDown(jumpKey),
-                SprintPressed = Input.GetKey(sprintKey),
+                SprintPressed = Input.GetKeyDown(sprintKey),
                 ViewDirection = transform.forward,
                 VelocityInput = Vector3.zero,
-                GroundNormal = Vector3.up
+                GroundNormal = Vector3.up,
+                DesiredRotationMode = FAlsRotationMode.VelocityDirection,
+                AimHeld = false,
+                RotationScale = 1f
             };
         }
 
@@ -41,7 +44,7 @@ namespace FGP.FALS.Runtime
         {
             return new FAlsFootballActionInput
             {
-                ShotPressed = Input.GetKey(shotKey),
+                ShotPressed = Input.GetKeyDown(shotKey),
                 BallDistance = ballDistance,
                 PreparedDistance = preparedDistance,
                 QuickDistance = quickDistance,
