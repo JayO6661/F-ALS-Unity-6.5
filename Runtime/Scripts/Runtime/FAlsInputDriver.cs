@@ -19,8 +19,7 @@ namespace FGP.FALS.Runtime
         [SerializeField] private float preparedDistance = 1.0f;
         [SerializeField] private float quickDistance = 1.8f;
         [SerializeField] private float reachDistance = 2.6f;
-        [SerializeField] private float leftReach = 0.95f;
-        [SerializeField] private float rightReach = 0.9f;
+        [SerializeField] private float emergencyFootReachDistance = 0.75f;
 
         public FAlsMotorInput ReadMotorInput()
         {
@@ -40,7 +39,10 @@ namespace FGP.FALS.Runtime
             };
         }
 
-        public FAlsFootballActionInput ReadFootballInput(float ballDistance)
+        public FAlsFootballActionInput ReadFootballInput(
+            float ballDistance,
+            float leftFootBallDistance = -1f,
+            float rightFootBallDistance = -1f)
         {
             return new FAlsFootballActionInput
             {
@@ -49,8 +51,9 @@ namespace FGP.FALS.Runtime
                 PreparedDistance = preparedDistance,
                 QuickDistance = quickDistance,
                 ReachDistance = reachDistance,
-                LeftFootReachDistance = leftReach,
-                RightFootReachDistance = rightReach
+                LeftFootBallDistance = leftFootBallDistance,
+                RightFootBallDistance = rightFootBallDistance,
+                EmergencyFootReachDistance = emergencyFootReachDistance
             };
         }
     }
