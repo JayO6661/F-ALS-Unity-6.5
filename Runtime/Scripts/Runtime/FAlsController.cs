@@ -28,6 +28,7 @@ namespace FGP.FALS.Runtime
     }
 
     [DisallowMultipleComponent]
+    [RequireComponent(typeof(FAlsLocomotionMotor))]
     public class FAlsController : MonoBehaviour
     {
         [SerializeField] private FAlsLocomotionMotor locomotionMotor;
@@ -40,6 +41,7 @@ namespace FGP.FALS.Runtime
 
         public FAlsActorSignals Signals { get; private set; }
         public FAlsLocomotionMotor LocomotionMotor => locomotionMotor;
+        public bool IsReady => locomotionMotor != null;
 
         private void Reset()
         {
@@ -48,6 +50,11 @@ namespace FGP.FALS.Runtime
 
         private void Awake()
         {
+            if (locomotionMotor == null)
+            {
+                locomotionMotor = GetComponent<FAlsLocomotionMotor>();
+            }
+
             _recoveryRuntime = FAlsRecoveryRuntimeState.Default;
         }
 
@@ -69,7 +76,7 @@ namespace FGP.FALS.Runtime
 
         public void Tick(FAlsMotorInput motorInput, FAlsFootballActionInput actionInput, float deltaTime)
         {
-            if (locomotionMotor == null)
+            if (locomotionMotor == null || deltaTime <= 0f)
             {
                 return;
             }
