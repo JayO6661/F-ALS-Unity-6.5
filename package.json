@@ -1,8 +1,10 @@
 {
   "name": "com.fgp.fals",
-  "version": "0.1.0",
+  "version": "1.0.0-preview.1",
   "displayName": "F-ALS Core",
-  "description": "Football Adaptive Locomotion System foundation for Unity.",
-  "unity": "2021.3",
-  "dependencies": {}
+  "description": "Football Adaptive Locomotion System foundation for Unity 6.",
+  "unity": "6000.0",
+  "dependencies": {
+    "com.unity.animation.rigging": "1.4.0"
+  }
 }
