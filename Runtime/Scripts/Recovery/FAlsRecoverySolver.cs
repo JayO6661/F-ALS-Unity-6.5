@@ -3,18 +3,6 @@ using UnityEngine;
 
 namespace FGP.FALS.Recovery
 {
-    /// <summary>
-    /// ALS-style Active Ragdoll + Recovery pipeline.
-    /// 
-    /// Domains:
-    /// - PhysicalControl (0..1): blend между animated и ragdoll позой.
-    /// - Stability: оценка устойчивости по COM, base of support, velocity.
-    /// - RecoveryState: None → Falling → GroundedRecovery → GetUp → Standing.
-    /// 
-    /// Принцип: motor продолжает работать, но при instability PhysicalControl
-    /// падает до 0, и поза определяется ragdoll-физикой. При recovery — 
-    /// procedural get-up анимация с постепенным возвратом контроля.
-    /// </summary>
     public enum FAlsRecoveryState
     {
         None,
@@ -36,11 +24,25 @@ namespace FGP.FALS.Recovery
         public float DeltaTime;
     }
 
+    public struct FAlsRecoveryRuntimeState
+    {
+        public FAlsRecoveryState State;
+        public float StateTime;
+        public float PhysicalControl;
+
+        public static FAlsRecoveryRuntimeState Default => new FAlsRecoveryRuntimeState
+        {
+            State = FAlsRecoveryState.None,
+            StateTime = 0f,
+            PhysicalControl = 1f
+        };
+    }
+
     public struct FAlsRecoveryOutput
     {
         public FAlsRecoveryState State;
-        public float PhysicalControl; // 0 = full ragdoll, 1 = full animated
-        public float Stability;       // 0..1 оценка устойчивости
+        public float PhysicalControl;
+        public float Stability;
         public bool RequestGetUp;
         public string DebugHint;
     }
@@ -51,53 +53,113 @@ namespace FGP.FALS.Recovery
         public const float DefaultRecoveryDuration = 0.8f;
         public const float DefaultGetUpDuration = 0.6f;
 
-        public static FAlsRecoveryOutput Resolve(FAlsRecoveryInput input, 
+        public static FAlsRecoveryOutput Resolve(
+            ref FAlsRecoveryRuntimeState runtime,
+            FAlsRecoveryInput input,
             float stabilityThreshold = DefaultStabilityThreshold,
             float recoveryDuration = DefaultRecoveryDuration,
             float getUpDuration = DefaultGetUpDuration)
         {
-            var output = new FAlsRecoveryOutput
-            {
-                State = FAlsRecoveryState.None,
-                PhysicalControl = input.PhysicalControl,
-                Stability = 1f,
-                RequestGetUp = false,
-                DebugHint = "stable"
-            };
-
-            // Оценка stability по velocity + ground normal + air time.
-            float speed = new Vector2(input.Velocity.x, input.Velocity.z).magnitude;
-            float slopePenalty = 1f - Mathf.Clamp01(Vector3.Dot(input.GroundNormal, Vector3.up));
-            float airPenalty = input.IsGrounded ? 0f : Mathf.Min(1f, input.AirTime * 0.8f);
-            
-            output.Stability = Mathf.Clamp01(1f - (speed * 0.08f + slopePenalty * 0.6f + airPenalty));
+            float dt = Mathf.Max(0f, input.DeltaTime);
+            float stability = CalculateStability(input);
+            var nextState = runtime.State;
 
             if (!input.IsGrounded && input.AirTime > 0.4f)
             {
-                output.State = FAlsRecoveryState.Falling;
-                output.PhysicalControl = Mathf.Lerp(input.PhysicalControl, 0.2f, input.DeltaTime * 8f);
-                output.DebugHint = "falling";
+                nextState = FAlsRecoveryState.Falling;
             }
-            else if (output.Stability < stabilityThreshold && input.IsGrounded)
+            else if (input.IsGrounded)
             {
-                output.State = FAlsRecoveryState.GroundedRecovery;
-                output.PhysicalControl = Mathf.Lerp(input.PhysicalControl, 0f, input.DeltaTime * 6f);
-                output.RequestGetUp = true;
-                output.DebugHint = "unstable, request get up";
+                if (runtime.State == FAlsRecoveryState.Falling || stability < stabilityThreshold)
+                {
+                    nextState = FAlsRecoveryState.GroundedRecovery;
+                }
+                else if (runtime.State == FAlsRecoveryState.GroundedRecovery && runtime.StateTime >= recoveryDuration)
+                {
+                    nextState = FAlsRecoveryState.GetUp;
+                }
+                else if (runtime.State == FAlsRecoveryState.GetUp && runtime.StateTime >= getUpDuration)
+                {
+                    nextState = FAlsRecoveryState.Standing;
+                }
+                else if (runtime.State == FAlsRecoveryState.Standing && runtime.StateTime >= 0.1f)
+                {
+                    nextState = FAlsRecoveryState.None;
+                }
             }
-            else if (input.IsGrounded && input.GroundedTime > getUpDuration && output.Stability >= stabilityThreshold)
+
+            if (nextState != runtime.State)
             {
-                output.State = FAlsRecoveryState.Standing;
-                output.PhysicalControl = Mathf.Lerp(input.PhysicalControl, 1f, input.DeltaTime * 4f);
-                output.DebugHint = "standing recovered";
+                runtime.State = nextState;
+                runtime.StateTime = 0f;
             }
             else
             {
-                output.State = FAlsRecoveryState.None;
-                output.PhysicalControl = Mathf.Lerp(input.PhysicalControl, 1f, input.DeltaTime * 3f);
+                runtime.StateTime += dt;
             }
 
-            return output;
+            float targetControl;
+            bool requestGetUp;
+            string hint;
+
+            switch (runtime.State)
+            {
+                case FAlsRecoveryState.Falling:
+                    targetControl = 0.2f;
+                    requestGetUp = false;
+                    hint = "falling";
+                    break;
+
+                case FAlsRecoveryState.GroundedRecovery:
+                    targetControl = 0f;
+                    requestGetUp = true;
+                    hint = "grounded recovery";
+                    break;
+
+                case FAlsRecoveryState.GetUp:
+                    targetControl = Mathf.Clamp01(runtime.StateTime / Mathf.Max(getUpDuration, 0.01f));
+                    requestGetUp = true;
+                    hint = "get up";
+                    break;
+
+                case FAlsRecoveryState.Standing:
+                    targetControl = 1f;
+                    requestGetUp = false;
+                    hint = "standing";
+                    break;
+
+                default:
+                    targetControl = 1f;
+                    requestGetUp = false;
+                    hint = "stable";
+                    break;
+            }
+
+            float blendRate = runtime.State == FAlsRecoveryState.GetUp ? 8f : 6f;
+            runtime.PhysicalControl = Mathf.MoveTowards(
+                runtime.PhysicalControl <= 0f && runtime.State == FAlsRecoveryState.None ? input.PhysicalControl : runtime.PhysicalControl,
+                targetControl,
+                blendRate * dt);
+
+            return new FAlsRecoveryOutput
+            {
+                State = runtime.State,
+                PhysicalControl = Mathf.Clamp01(runtime.PhysicalControl),
+                Stability = stability,
+                RequestGetUp = requestGetUp,
+                DebugHint = hint
+            };
+        }
+
+        public static float CalculateStability(FAlsRecoveryInput input)
+        {
+            float horizontalSpeed = new Vector2(input.Velocity.x, input.Velocity.z).magnitude;
+            float upness = input.GroundNormal.sqrMagnitude > 0.0001f
+                ? Vector3.Dot(input.GroundNormal.normalized, Vector3.up)
+                : 1f;
+            float slopePenalty = 1f - Mathf.Clamp01(upness);
+            float airPenalty = input.IsGrounded ? 0f : Mathf.Min(1f, input.AirTime * 0.8f);
+            return Mathf.Clamp01(1f - (horizontalSpeed * 0.08f + slopePenalty * 0.6f + airPenalty));
         }
     }
 }
