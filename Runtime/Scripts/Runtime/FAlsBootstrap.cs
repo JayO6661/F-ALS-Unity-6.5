@@ -1,3 +1,4 @@
+using FGP.FALS.Action;
 using UnityEngine;
 
 namespace FGP.FALS.Runtime
@@ -9,7 +10,11 @@ namespace FGP.FALS.Runtime
         [SerializeField] private FAlsController controller;
         [SerializeField] private FAlsInputDriver inputDriver;
         [SerializeField] private FAlsAnimatorBridge animatorBridge;
+
+        [Header("Football context")]
         [SerializeField] private Transform ballTransform;
+        [SerializeField] private Transform leftFootTransform;
+        [SerializeField] private Transform rightFootTransform;
         [SerializeField] private float assumedBallDistance = 2.2f;
 
         private void Reset()
@@ -27,28 +32,38 @@ namespace FGP.FALS.Runtime
             }
 
             var motorInput = inputDriver.ReadMotorInput();
-            var actionInput = inputDriver.ReadFootballInput(CalculateBallDistance());
+            var actionInput = BuildFootballActionInput();
             controller.Tick(motorInput, actionInput, Time.deltaTime);
         }
 
         private void LateUpdate()
         {
-            if (animatorBridge == null)
+            if (animatorBridge != null && controller != null)
             {
-                return;
+                animatorBridge.Apply(controller.Signals);
             }
-
-            animatorBridge.Apply(controller.Signals);
         }
 
-        private float CalculateBallDistance()
+        private FAlsFootballActionInput BuildFootballActionInput()
         {
-            if (ballTransform == null)
+            float ballDistance = CalculateDistance(transform, ballTransform, assumedBallDistance);
+            float leftFootBallDistance = CalculateDistance(leftFootTransform, ballTransform, -1f);
+            float rightFootBallDistance = CalculateDistance(rightFootTransform, ballTransform, -1f);
+
+            return inputDriver.ReadFootballInput(
+                ballDistance,
+                leftFootBallDistance,
+                rightFootBallDistance);
+        }
+
+        private static float CalculateDistance(Transform from, Transform to, float fallback)
+        {
+            if (from == null || to == null)
             {
-                return assumedBallDistance;
+                return fallback;
             }
 
-            return Vector3.Distance(transform.position, ballTransform.position);
+            return Vector3.Distance(from.position, to.position);
         }
     }
 }
