@@ -29,7 +29,7 @@ namespace FGP.FALS.EditorTools
         {
             EditorGUILayout.LabelField("F-ALS Production Setup", EditorStyles.boldLabel);
             EditorGUILayout.HelpBox(
-                "Adds only the production locomotion foundation. Input, skills, stamina, ball gameplay and networking remain game-owned.",
+                "Adds only the locomotion foundation. Input, skills, stamina, ball gameplay, AI and networking stay game-owned.",
                 MessageType.Info);
 
             _target = (GameObject)EditorGUILayout.ObjectField("Player Root", _target, typeof(GameObject), true);
@@ -55,7 +55,7 @@ namespace FGP.FALS.EditorTools
             EditorGUILayout.LabelField("• FAlsController");
             EditorGUILayout.LabelField("• FAlsAnimatorBridge (when Animator exists)");
             EditorGUILayout.HelpBox(
-                "Foot IK is optional and requires Animation Rigging targets/constraints. Add FAlsFootIK only after the rig is prepared.",
+                "FAlsFootIK is optional. Add it only after Animation Rigging targets/constraints are prepared.",
                 MessageType.None);
         }
 
@@ -65,13 +65,13 @@ namespace FGP.FALS.EditorTools
 
             Undo.RegisterFullObjectHierarchyUndo(target, "Apply F-ALS Core Setup");
 
-            var cc = GetOrAdd<CharacterController>(target);
+            var characterController = GetOrAdd<CharacterController>(target);
             var motor = GetOrAdd<FAlsLocomotionMotor>(target);
             var controller = GetOrAdd<FAlsController>(target);
             var animator = target.GetComponentInChildren<Animator>(true);
             var bridge = animator != null ? GetOrAdd<FAlsAnimatorBridge>(target) : null;
 
-            AssignObjectReference(motor, "characterController", cc);
+            AssignObjectReference(motor, "characterController", characterController);
             AssignObjectReference(controller, "locomotionMotor", motor);
             if (bridge != null) AssignObjectReference(bridge, "animator", animator);
 
@@ -79,7 +79,7 @@ namespace FGP.FALS.EditorTools
             EditorSceneManager.MarkSceneDirty(target.scene);
 
             Validate(target, false);
-            Debug.Log($"[F-ALS] Production core setup applied to '{target.name}'.");
+            Debug.Log($"[F-ALS] Production core setup applied to '{target.name}'.", target);
         }
 
         private static T GetOrAdd<T>(GameObject target) where T : Component
@@ -109,6 +109,7 @@ namespace FGP.FALS.EditorTools
             }
 
             bool valid = true;
+
             if (target.GetComponent<CharacterController>() == null)
             {
                 Debug.LogError("[F-ALS] Missing CharacterController on player root.", target);
@@ -125,11 +126,6 @@ namespace FGP.FALS.EditorTools
             {
                 Debug.LogError("[F-ALS] Missing FAlsController on player root.", target);
                 valid = false;
-            }
-
-            if (target.GetComponent<FAlsInputDriver>() != null || target.GetComponent<FAlsBootstrap>() != null)
-            {
-                Debug.LogWarning("[F-ALS] Legacy standalone input/bootstrap components detected. Remove them for production game integration.", target);
             }
 
             if (valid && logSuccess)
