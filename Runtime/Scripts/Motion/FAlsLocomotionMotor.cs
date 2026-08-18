@@ -53,10 +53,19 @@ namespace FGP.FALS.Motion
 
         public FAlsLocomotionState State => _state;
         public FAlsMovementCapacity Capacity => _capacity;
+        public bool IsReady => characterController != null && characterController.enabled;
 
         private void Reset()
         {
             characterController = GetComponent<CharacterController>();
+        }
+
+        private void Awake()
+        {
+            if (characterController == null)
+            {
+                characterController = GetComponent<CharacterController>();
+            }
         }
 
         public void SetRotationMode(FAlsRotationMode mode)

@@ -5,15 +5,10 @@ namespace FGP.FALS.Motion
 {
     public static class FAlsMotionRules
     {
-        // ALS-Refactored reference defaults (AlsMovementSettings.h): 175/375/650 cm/s.
         public const float DefaultWalkSpeed = 1.75f;
         public const float DefaultRunSpeed = 3.75f;
         public const float DefaultSprintSpeed = 6.5f;
-
-        /// <summary>ALS CanSprint cone: input must roughly align with the body facing.</summary>
         public const float SprintConeDeg = 50f;
-
-        /// <summary>Idle turn-in-place engages past this view/body yaw mismatch.</summary>
         public const float TurnInPlaceThresholdDeg = 50f;
 
         [System.Obsolete("Use the overload with explicit gait speeds (motor fields).")]
@@ -22,26 +17,36 @@ namespace FGP.FALS.Motion
             return SelectTargetSpeed(input, state, DefaultWalkSpeed, DefaultRunSpeed, DefaultSprintSpeed);
         }
 
-        /// <summary>Target speed from intent, using the motor's serialized gait speeds.</summary>
-        public static float SelectTargetSpeed(FAlsMotorInput input, FAlsLocomotionState state,
-            float walkSpeed, float runSpeed, float sprintSpeed)
+        public static float SelectTargetSpeed(
+            FAlsMotorInput input,
+            FAlsLocomotionState state,
+            float walkSpeed,
+            float runSpeed,
+            float sprintSpeed)
         {
+            float magnitude = Mathf.Clamp01(input.MoveInput.magnitude);
+            if (magnitude < 0.01f)
+            {
+                return 0f;
+            }
+
             if (input.Crouch)
             {
-                return walkSpeed * 0.8f;
+                return walkSpeed * 0.8f * magnitude;
             }
 
-            if (!input.Sprint)
+            if (input.Sprint && CanSprint(input, state))
             {
-                // Analog deflection blends walk..run like the ALS gait amount.
-                float mag = Mathf.Clamp01(input.MoveInput.magnitude);
-                return mag < 0.45f ? walkSpeed : runSpeed;
+                return sprintSpeed * magnitude;
             }
 
-            return CanSprint(input, state) ? sprintSpeed : runSpeed;
+            // Analog input below the walk/run threshold scales walking speed;
+            // stronger input requests running speed without changing motor authority.
+            return magnitude < 0.45f
+                ? walkSpeed * Mathf.InverseLerp(0.01f, 0.45f, magnitude)
+                : Mathf.Lerp(walkSpeed, runSpeed, Mathf.InverseLerp(0.45f, 1f, magnitude));
         }
 
-        /// <summary>ALS CanSprint: sprint only inside a forward cone around the body yaw.</summary>
         public static bool CanSprint(FAlsMotorInput input, FAlsLocomotionState state)
         {
             if (!input.Sprint || input.MoveInput.sqrMagnitude < 0.0001f)
@@ -68,7 +73,6 @@ namespace FGP.FALS.Motion
             return targetSpeed < runSpeed + 0.8f ? FAlsGait.Running : FAlsGait.Sprinting;
         }
 
-        /// <summary>Continuous gait amount: 0 standing, 1 walk, 2 run, 3 sprint.</summary>
         public static float GaitAmountFromSpeed(float speed, float walkSpeed, float runSpeed, float sprintSpeed)
         {
             if (speed < 0.05f) return 0f;
@@ -77,7 +81,6 @@ namespace FGP.FALS.Motion
             return Mathf.Lerp(2f, 3f, Mathf.Clamp01((speed - runSpeed) / Mathf.Max(sprintSpeed - runSpeed, 0.01f)));
         }
 
-        /// <summary>Idle turn-in-place: returns yaw offset to apply (0 = no turn needed).</summary>
         public static float TurnInPlaceCheck(float viewYaw, float bodyYaw)
         {
             float delta = Mathf.DeltaAngle(bodyYaw, viewYaw);
@@ -86,14 +89,18 @@ namespace FGP.FALS.Motion
 
         public static float ClampByGroundSlope(float speed, Vector3 groundNormal)
         {
-            var upness = Vector3.Dot(groundNormal.normalized, Vector3.up);
-            if (upness >= 1.0f)
+            if (groundNormal.sqrMagnitude < 0.0001f)
             {
                 return speed;
             }
 
-            // Slower on steep slopes.
-            return speed * Mathf.Lerp(0.78f, 1.0f, Mathf.Clamp01((upness + 0.2f) / 0.8f));
+            float upness = Vector3.Dot(groundNormal.normalized, Vector3.up);
+            if (upness >= 1f)
+            {
+                return speed;
+            }
+
+            return speed * Mathf.Lerp(0.78f, 1f, Mathf.Clamp01((upness + 0.2f) / 0.8f));
         }
     }
 }
