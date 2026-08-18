@@ -36,11 +36,35 @@ namespace FGP.FALS.Runtime
         [SerializeField] private float recoveryDuration = FAlsRecoverySolver.DefaultRecoveryDuration;
         [SerializeField] private float getUpDuration = FAlsRecoverySolver.DefaultGetUpDuration;
 
+        private FAlsRecoveryRuntimeState _recoveryRuntime = FAlsRecoveryRuntimeState.Default;
+
         public FAlsActorSignals Signals { get; private set; }
+        public FAlsLocomotionMotor LocomotionMotor => locomotionMotor;
 
         private void Reset()
         {
             locomotionMotor = GetComponent<FAlsLocomotionMotor>();
+        }
+
+        private void Awake()
+        {
+            _recoveryRuntime = FAlsRecoveryRuntimeState.Default;
+        }
+
+        public void SetMovementCapacity(FAlsMovementCapacity capacity)
+        {
+            if (locomotionMotor != null)
+            {
+                locomotionMotor.SetCapacity(capacity);
+            }
+        }
+
+        public void ResetMovementCapacity()
+        {
+            if (locomotionMotor != null)
+            {
+                locomotionMotor.ResetCapacity();
+            }
         }
 
         public void Tick(FAlsMotorInput motorInput, FAlsFootballActionInput actionInput, float deltaTime)
@@ -52,9 +76,7 @@ namespace FGP.FALS.Runtime
 
             locomotionMotor.TickMotor(motorInput, deltaTime);
             var locomotion = locomotionMotor.State;
-
             var footballAction = FAlsFootballActionResolver.Resolve(actionInput);
-            var procedural = FAlsProceduralSolver.Resolve(locomotion, proceduralSmoothing, deltaTime);
 
             var recoveryInput = new FAlsRecoveryInput
             {
@@ -67,11 +89,19 @@ namespace FGP.FALS.Runtime
                 JumpRequested = motorInput.JumpRequested,
                 DeltaTime = deltaTime
             };
-            var recovery = FAlsRecoverySolver.Resolve(recoveryInput, stabilityThreshold, recoveryDuration, getUpDuration);
 
-            // Apply recovery PhysicalControl back to locomotion state for animation blending.
-            // Note: this is a side-effect on the struct copy; motor will update next tick.
+            var recovery = FAlsRecoverySolver.Resolve(
+                ref _recoveryRuntime,
+                recoveryInput,
+                stabilityThreshold,
+                recoveryDuration,
+                getUpDuration);
 
+            // Recovery is part of simulation state, not presentation-only data.
+            locomotionMotor.SetPhysicalControl(recovery.PhysicalControl);
+            locomotion = locomotionMotor.State;
+
+            var procedural = FAlsProceduralSolver.Resolve(locomotion, proceduralSmoothing, deltaTime);
             Signals = new FAlsActorSignals(locomotion, procedural, footballAction, recovery);
         }
     }

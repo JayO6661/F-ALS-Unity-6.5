@@ -1,61 +1,45 @@
-```
-# Unity specific ignores
-Library/
-Temp/
-Obj/
-Build/
-Logs/
-*.unityproj
-*.sln
+# Unity generated folders
+[Ll]ibrary/
+[Tt]emp/
+[Oo]bj/
+[Bb]uild/
+[Bb]uilds/
+[Ll]ogs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+
+# IDE / generated project files
+.vscode/
+.idea/
+.vs/
 *.csproj
+*.sln
+*.suo
 *.user
 *.userprefs
 *.pidb
 *.booproj
 *.svd
-*.meta
-*.cache
-*.asmdef
-*.rsp
-*.asmref
+*.tmp
+*.swp
+*.swo
 
-# Build artifacts
-*.dll
-*.exe
+# Build/debug artifacts
 *.pdb
-*.so
-*.dylib
-*.manifest
-*.prefab
-*.asset
+*.mdb
+*.opendb
+*.VC.db
 
-# Config files
-*.config
-*.xml
-
-# Logs
-*.log
-
-# OS generated files
+# OS generated
 .DS_Store
 Thumbs.db
-ehthumbs.db
-Icon?
 desktop.ini
 
-# Environment variables
+# Local secrets
 .env
 .env.local
 *.env.*
 
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*.tmp
-
-# Dependencies
-node_modules/
-Packages/
-```
+# IMPORTANT: Unity source assets must remain versioned.
+# Do NOT ignore *.meta, *.asmdef, *.prefab, *.asset or Packages/.
