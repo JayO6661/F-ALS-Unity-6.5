@@ -1,23 +1,9 @@
+using FGP.FALS.Core;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
 
 namespace FGP.FALS.Procedural
 {
-    /// <summary>
-    /// Foot IK implementation using Unity Animation Rigging.
-    /// 
-    /// Provides:
-    /// - Foot locking when foot should stay planted (e.g., during stride)
-    /// - Ground adaptation (vertical offset based on terrain)
-    /// - Pelvis height adjustment for uneven ground
-    /// - Balance correction based on velocity/lean
-    /// 
-    /// Requirements:
-    /// - Animation Rigging package installed
-    /// - RigBuilder component on character root
-    /// - TwoBoneIKConstraint for each leg
-    /// - MultiAimConstraint or Override for pelvis
-    /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(Runtime.FAlsController))]
     public class FAlsFootIK : MonoBehaviour
@@ -35,8 +21,6 @@ namespace FGP.FALS.Procedural
 
         [Header("Foot Lock Settings")]
         [SerializeField] private float lockBlendSpeed = 15f;
-        [SerializeField] private float lockDistanceThreshold = 0.15f;
-        [SerializeField] private float unlockHeightThreshold = 0.3f;
 
         [Header("Ground Adaptation")]
         [SerializeField] private LayerMask groundLayers = ~0;
@@ -66,7 +50,6 @@ namespace FGP.FALS.Procedural
         {
             _controller = GetComponent<Runtime.FAlsController>();
             CacheBasePose();
-            
             if (rigBuilder != null)
             {
                 rigBuilder.Build();
@@ -88,22 +71,18 @@ namespace FGP.FALS.Procedural
 
         private void LateUpdate()
         {
-            if (_controller == null) return;
+            if (_controller == null)
+            {
+                return;
+            }
 
             var procedural = _controller.Signals.Procedural;
             var locomotion = _controller.Signals.Locomotion;
             float deltaTime = Time.deltaTime;
 
-            // Update foot lock states
             UpdateFootLock(procedural, locomotion, deltaTime);
-
-            // Apply ground adaptation
             ApplyGroundAdaptation(deltaTime);
-
-            // Apply balance correction
             ApplyBalanceCorrection(locomotion, deltaTime);
-
-            // Update rig weights
             UpdateRigWeights(procedural);
         }
 
@@ -111,17 +90,15 @@ namespace FGP.FALS.Procedural
         {
             float lockBlend = 1f - Mathf.Exp(-lockBlendSpeed * deltaTime);
 
-            // Left foot lock
-            bool shouldLockLeft = procedural.LockedFoot == FAlsLockedFoot.Left || 
+            bool shouldLockLeft = procedural.LockedFoot == FAlsLockedFoot.Left ||
                                   (procedural.FootLock > 0.5f && !locomotion.HasInput);
-            
             if (shouldLockLeft && !_leftFootLocked && leftFootTarget != null)
             {
                 _leftFootLockPosition = leftFootTarget.position;
                 _leftFootLockRotation = leftFootTarget.rotation;
                 _leftFootLocked = true;
             }
-            else if (!shouldLockLeft && _leftFootLocked)
+            else if (!shouldLockLeft)
             {
                 _leftFootLocked = false;
             }
@@ -137,17 +114,15 @@ namespace FGP.FALS.Procedural
                 _leftFootLockWeight = Mathf.Lerp(_leftFootLockWeight, 0f, lockBlend);
             }
 
-            // Right foot lock
-            bool shouldLockRight = procedural.LockedFoot == FAlsLockedFoot.Right || 
+            bool shouldLockRight = procedural.LockedFoot == FAlsLockedFoot.Right ||
                                    (procedural.FootLock > 0.5f && !locomotion.HasInput);
-            
             if (shouldLockRight && !_rightFootLocked && rightFootTarget != null)
             {
                 _rightFootLockPosition = rightFootTarget.position;
                 _rightFootLockRotation = rightFootTarget.rotation;
                 _rightFootLocked = true;
             }
-            else if (!shouldLockRight && _rightFootLocked)
+            else if (!shouldLockRight)
             {
                 _rightFootLocked = false;
             }
@@ -168,13 +143,13 @@ namespace FGP.FALS.Procedural
         {
             float smooth = 1f - Mathf.Exp(-smoothAdaptation * deltaTime);
 
-            // Left foot ground detection
             if (leftFootTarget != null)
             {
-                Vector3 leftFootRayOrigin = leftFootTarget.position + Vector3.up * footRayOffset;
-                if (Physics.Raycast(leftFootRayOrigin, Vector3.down, out RaycastHit leftHit, raycastDistance, groundLayers))
+                Vector3 origin = leftFootTarget.position + Vector3.up * footRayOffset;
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, raycastDistance, groundLayers))
                 {
-                    _groundAdaptationLeft = Mathf.Lerp(_groundAdaptationLeft, leftHit.distance - footRayOffset, smooth);
+                    float targetY = hit.point.y;
+                    _groundAdaptationLeft = Mathf.Lerp(_groundAdaptationLeft, targetY - leftFootTarget.position.y, smooth);
                 }
                 else
                 {
@@ -182,13 +157,13 @@ namespace FGP.FALS.Procedural
                 }
             }
 
-            // Right foot ground detection
             if (rightFootTarget != null)
             {
-                Vector3 rightFootRayOrigin = rightFootTarget.position + Vector3.up * footRayOffset;
-                if (Physics.Raycast(rightFootRayOrigin, Vector3.down, out RaycastHit rightHit, raycastDistance, groundLayers))
+                Vector3 origin = rightFootTarget.position + Vector3.up * footRayOffset;
+                if (Physics.Raycast(origin, Vector3.down, out RaycastHit hit, raycastDistance, groundLayers))
                 {
-                    _groundAdaptationRight = Mathf.Lerp(_groundAdaptationRight, rightHit.distance - footRayOffset, smooth);
+                    float targetY = hit.point.y;
+                    _groundAdaptationRight = Mathf.Lerp(_groundAdaptationRight, targetY - rightFootTarget.position.y, smooth);
                 }
                 else
                 {
@@ -196,101 +171,71 @@ namespace FGP.FALS.Procedural
                 }
             }
 
-            // Apply pelvis adaptation (average of both feet)
             if (pelvisTarget != null)
             {
-                float avgAdaptation = (_groundAdaptationLeft + _groundAdaptationRight) * 0.5f;
-                Vector3 adaptedPelvisPos = _pelvisBasePosition + Vector3.up * avgAdaptation;
+                float lowestFootOffset = Mathf.Min(_groundAdaptationLeft, _groundAdaptationRight);
+                Vector3 adaptedPelvisPos = _pelvisBasePosition + Vector3.up * lowestFootOffset;
                 pelvisTarget.localPosition = Vector3.Lerp(pelvisTarget.localPosition, adaptedPelvisPos, smooth);
             }
         }
 
         private void ApplyBalanceCorrection(FAlsLocomotionState locomotion, float deltaTime)
         {
-            if (pelvisTarget == null) return;
-
-            float smooth = 1f - Mathf.Exp(-balanceSmoothing * deltaTime);
-            
-            // Calculate lean-based tilt
-            float velocityMagnitude = new Vector2(locomotion.Velocity.x, locomotion.Velocity.z).magnitude;
-            float leanFactor = Mathf.Clamp01(velocityMagnitude / 10f);
-            
-            // Tilt pelvis opposite to movement direction for balance
-            Vector3 moveDir = locomotion.Velocity.normalized;
-            if (moveDir.magnitude > 0.01f)
+            if (pelvisTarget == null)
             {
-                float tiltAngle = maxPelvisTilt * leanFactor;
-                Quaternion tiltRotation = Quaternion.Euler(0, 0, -tiltAngle * Mathf.Sign(moveDir.x));
-                pelvisTarget.localRotation = Quaternion.Slerp(pelvisTarget.localRotation, tiltRotation, smooth);
+                return;
             }
 
-            // Shift pelvis toward support foot when one foot is locked
+            float smooth = 1f - Mathf.Exp(-balanceSmoothing * deltaTime);
+            Vector3 horizontalVelocity = new Vector3(locomotion.Velocity.x, 0f, locomotion.Velocity.z);
+            float leanFactor = Mathf.Clamp01(horizontalVelocity.magnitude / 10f);
+
+            if (horizontalVelocity.sqrMagnitude > 0.0001f)
+            {
+                Vector3 localMove = transform.InverseTransformDirection(horizontalVelocity.normalized);
+                float tiltAngle = -maxPelvisTilt * leanFactor * localMove.x;
+                Quaternion tiltRotation = Quaternion.Euler(0f, 0f, tiltAngle);
+                pelvisTarget.localRotation = Quaternion.Slerp(pelvisTarget.localRotation, tiltRotation, smooth);
+            }
+            else
+            {
+                pelvisTarget.localRotation = Quaternion.Slerp(pelvisTarget.localRotation, Quaternion.identity, smooth);
+            }
+
+            Vector3 supportShift = Vector3.zero;
             if (_leftFootLocked && !_rightFootLocked)
             {
-                Vector3 shift = Vector3.right * maxPelvisShift * 0.5f;
-                pelvisTarget.localPosition = Vector3.Lerp(pelvisTarget.localPosition, _pelvisBasePosition + shift, smooth);
+                supportShift = Vector3.left * maxPelvisShift * 0.5f;
             }
             else if (_rightFootLocked && !_leftFootLocked)
             {
-                Vector3 shift = Vector3.left * maxPelvisShift * 0.5f;
-                pelvisTarget.localPosition = Vector3.Lerp(pelvisTarget.localPosition, _pelvisBasePosition + shift, smooth);
+                supportShift = Vector3.right * maxPelvisShift * 0.5f;
             }
+
+            Vector3 targetPosition = _pelvisBasePosition + Vector3.up * Mathf.Min(_groundAdaptationLeft, _groundAdaptationRight) + supportShift;
+            pelvisTarget.localPosition = Vector3.Lerp(pelvisTarget.localPosition, targetPosition, smooth);
         }
 
         private void UpdateRigWeights(FAlsProceduralSignals procedural)
         {
-            float ikWeight = procedural.FootLock;
-            
-            if (leftFootRig.IsValid())
-            {
-                leftFootRig.weight = Mathf.Lerp(leftFootRig.weight, ikWeight, Time.deltaTime * 10f);
-            }
-            
-            if (rightFootRig.IsValid())
-            {
-                rightFootRig.weight = Mathf.Lerp(rightFootRig.weight, ikWeight, Time.deltaTime * 10f);
-            }
-            
-            if (pelvisRig.IsValid())
-            {
-                pelvisRig.weight = Mathf.Lerp(pelvisRig.weight, procedural.GroundAdaptation, Time.deltaTime * 10f);
-            }
-        }
+            float ikWeight = Mathf.Clamp01(procedural.FootLock * procedural.GroundAdaptation);
+            float t = 1f - Mathf.Exp(-10f * Time.deltaTime);
 
-        public void SetFootLock(FAlsLockedFoot foot)
-        {
-            // Can be called externally to force foot lock state
+            if (leftFootRig != null)
+            {
+                leftFootRig.weight = Mathf.Lerp(leftFootRig.weight, ikWeight, t);
+            }
+            if (rightFootRig != null)
+            {
+                rightFootRig.weight = Mathf.Lerp(rightFootRig.weight, ikWeight, t);
+            }
+            if (pelvisRig != null)
+            {
+                pelvisRig.weight = Mathf.Lerp(pelvisRig.weight, procedural.GroundAdaptation, t);
+            }
         }
 
         public bool IsLeftFootLocked => _leftFootLocked;
         public bool IsRightFootLocked => _rightFootLocked;
-
-        private void OnDrawGizmosSelected()
-        {
-            if (leftFootTarget != null)
-            {
-                Gizmos.color = _leftFootLocked ? Color.green : Color.yellow;
-                Gizmos.DrawWireSphere(leftFootTarget.position, 0.1f);
-            }
-
-            if (rightFootTarget != null)
-            {
-                Gizmos.color = _rightFootLocked ? Color.green : Color.yellow;
-                Gizmos.DrawWireSphere(rightFootTarget.position, 0.1f);
-            }
-
-            // Draw ground rays
-            Gizmos.color = Color.blue;
-            if (leftFootTarget != null)
-            {
-                Vector3 leftRayOrigin = leftFootTarget.position + Vector3.up * footRayOffset;
-                Gizmos.DrawLine(leftRayOrigin, leftRayOrigin + Vector3.down * raycastDistance);
-            }
-            if (rightFootTarget != null)
-            {
-                Vector3 rightRayOrigin = rightFootTarget.position + Vector3.up * footRayOffset;
-                Gizmos.DrawLine(rightRayOrigin, rightRayOrigin + Vector3.down * raycastDistance);
-            }
-        }
     }
 }
